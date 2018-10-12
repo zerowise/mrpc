@@ -2,7 +2,6 @@ package com.github.zerowise.codec;
 
 import com.github.zerowise.tools.ProtostuffUtil;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -22,9 +21,9 @@ public class RpcMessageEncoder extends MessageToByteEncoder<Object> {
         int len = msg.getClass().getName().getBytes(Charset.defaultCharset()).length;
         byte[] bytes = ProtostuffUtil.toByteArray(msg);
         out.writeInt(
-                1
-                        + len
-                        + bytes.length
+                1                       // classname len
+                        + len           // classname
+                        + bytes.length  // 数据
         ).writeByte(len).writeCharSequence(clazzName, Charset.defaultCharset());
         out.writeBytes(bytes);
     }
