@@ -28,4 +28,10 @@ public class RpcServer extends TcpServer {
             }
         };
     }
+
+    @Override
+    public void stop() {
+        super.stop();
+        rpcDispatcher.shutdown();
+    }
 }
