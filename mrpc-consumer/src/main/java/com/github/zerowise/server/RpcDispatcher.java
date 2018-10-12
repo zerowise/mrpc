@@ -128,7 +128,7 @@ public abstract class RpcDispatcher {
         protected String getMethodKey(String serviceName, String methodName, Class[] parameterTypes) {
             StringBuilder builder = new StringBuilder();
             builder.append(serviceName).append("_").append(methodName).append("_");
-            IntStream.of(parameterTypes.length).forEach(i -> {
+            IntStream.range(0, parameterTypes.length).forEach(i -> {
                 builder.append(i).append("@").append(parameterTypes[i].getName()).append("_");
             });
             return builder.toString();
