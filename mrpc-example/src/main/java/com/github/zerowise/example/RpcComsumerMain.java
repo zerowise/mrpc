@@ -1,0 +1,18 @@
+package com.github.zerowise.example;
+
+import com.github.zerowise.server.RpcDispatcher;
+import com.github.zerowise.server.RpcServer;
+
+/**
+ ** @createtime : 2018/10/12下午4:52
+ **/
+public class RpcComsumerMain {
+
+    public static void main(String[] args) {
+        RpcDispatcher rpcDispatcher = RpcDispatcher.def();
+        rpcDispatcher.register(new RpcCalServiceImpl());
+        RpcServer rpcServer = new RpcServer(6666, rpcDispatcher);
+        rpcServer.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> rpcServer.stop()));
+    }
+}

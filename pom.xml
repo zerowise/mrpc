@@ -13,11 +13,11 @@
         <module>mrpc-netty</module>
         <module>mrpc-producer</module>
         <module>mrpc-core</module>
+        <module>mrpc-example</module>
+        <module>mrpc-consumer</module>
     </modules>
 
     <name>mrpc</name>
-    <!-- FIXME change it to the project's website -->
-    <url>http://www.example.com</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -27,6 +27,7 @@
         <io.protostuff.version>1.6.0</io.protostuff.version>
         <org.apache.commons.commons-lang3.version>3.4</org.apache.commons.commons-lang3.version>
         <io.netty.netty-all.version>4.1.29.Final</io.netty.netty-all.version>
+        <cglib.version>3.2.8</cglib.version>
     </properties>
 
     <dependencies>
@@ -61,6 +62,12 @@
                 <artifactId>netty-all</artifactId>
                 <version>${io.netty.netty-all.version}</version>
             </dependency>
+            <dependency>
+                <groupId>cglib</groupId>
+                <artifactId>cglib</artifactId>
+                <version>${cglib.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
     <build>

@@ -30,8 +30,6 @@ public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
 
         String clazzName = (String) byteBuf.readCharSequence(clsNameLen, Charset.defaultCharset());
 
-        System.out.println("------" + clazzName + "-------");
-
         Class clazz = ClazzUtil.findClazz(clazzName);
         if (clazz == null) {
             System.err.println("------" + clazzName + "---not found!!!----");

@@ -62,7 +62,7 @@ public abstract class TcpClient implements Service {
 
     protected abstract InetSocketAddress remoteAddr();
 
-    protected abstract SimpleChannelInboundHandler handler();
+    protected abstract ChannelHandler handler();
 
     @Override
     public void stop() {

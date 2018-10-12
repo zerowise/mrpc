@@ -31,7 +31,7 @@ public abstract class TcpServer implements Service {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast(new RpcMessageDecoder(),
-                        new RpcMessageEncoder(), getChannelHandler());
+                        new RpcMessageEncoder(), channelHandler());
             }
         });
 
@@ -54,7 +54,7 @@ public abstract class TcpServer implements Service {
         worker = new NioEventLoopGroup();
     }
 
-    protected abstract ChannelHandler getChannelHandler();
+    protected abstract ChannelHandler channelHandler();
 
     @Override
     public void stop() {
