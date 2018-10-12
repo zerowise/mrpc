@@ -9,7 +9,7 @@ import com.github.zerowise.server.RpcServer;
 public class RpcComsumerMain {
 
     public static void main(String[] args) {
-        RpcDispatcher rpcDispatcher = RpcDispatcher.def();
+        RpcDispatcher rpcDispatcher = RpcDispatcher.type();
         rpcDispatcher.register(new RpcCalServiceImpl());
         RpcServer rpcServer = new RpcServer(6666, rpcDispatcher);
         rpcServer.start();

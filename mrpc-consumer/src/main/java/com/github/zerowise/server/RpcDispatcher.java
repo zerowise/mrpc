@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -87,7 +88,7 @@ public abstract class RpcDispatcher {
             invokerCaches.put(getMethodKey(clazzInter.getName(), method.getName(), method.getParameterTypes()), new FastInvoker(bean, fastClass.getMethod(method)));
         }
 
-        private String getMethodKey(String serviceName, String methodName, Class[] parameterTypes) {
+        protected String getMethodKey(String serviceName, String methodName, Class[] parameterTypes) {
             return serviceName + "_" + methodName + "_" + parameterTypes.length;
         }
     }
@@ -122,6 +123,18 @@ public abstract class RpcDispatcher {
         }
     }
 
+    private static class TypeRpcDispatcher extends DefaultRpcDispatcher {
+        @Override
+        protected String getMethodKey(String serviceName, String methodName, Class[] parameterTypes) {
+            StringBuilder builder = new StringBuilder();
+            builder.append(serviceName).append("_").append(methodName).append("_");
+            IntStream.of(parameterTypes.length).forEach(i -> {
+                builder.append(i).append("@").append(parameterTypes[i].getName()).append("_");
+            });
+            return builder.toString();
+        }
+    }
+
 
     public static RpcDispatcher def() {
         return new DefaultRpcDispatcher();
@@ -129,5 +142,10 @@ public abstract class RpcDispatcher {
 
     public static RpcDispatcher lazy() {
         return new LazyRpcDispatcher();
+    }
+
+
+    public static RpcDispatcher type() {
+        return new TypeRpcDispatcher();
     }
 }

@@ -10,6 +10,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>mrpc-example</artifactId>
+    <packaging>pom</packaging>
+    <modules>
+        <module>mrpc-example-api</module>
+    </modules>
     <dependencies>
         <dependency>
             <groupId>com.github.zerowise</groupId>
