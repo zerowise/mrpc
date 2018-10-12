@@ -11,6 +11,8 @@
     <modules>
         <module>mrpc-tools</module>
         <module>mrpc-netty</module>
+        <module>mrpc-producer</module>
+        <module>mrpc-core</module>
     </modules>
 
     <name>mrpc</name>
