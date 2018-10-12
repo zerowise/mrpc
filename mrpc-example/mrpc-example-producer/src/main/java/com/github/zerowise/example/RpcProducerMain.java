@@ -1,12 +1,10 @@
 package com.github.zerowise.example;
 
 import com.github.zerowise.client.RpcClient;
+import com.github.zerowise.example.RpcCalService;
 import com.github.zerowise.rpc.RpcInvoker;
 import com.github.zerowise.rpc.RpcProxy;
 
-/**
- ** @createtime : 2018/10/12下午4:15
- **/
 public class RpcProducerMain {
     public static void main(String[] args) {
         RpcClient rpcClient = RpcClient.createFixedAddrClient("localhost", 6666);
