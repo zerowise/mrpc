@@ -5,7 +5,7 @@ package com.github.zerowise.netty;
  **/
 public interface Service {
 
-    void start();
+    void start(ServiceListener listener);
 
-    void stop();
+    void stop(ServiceListener listener);
 }

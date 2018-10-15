@@ -1,5 +1,6 @@
 package com.github.zerowise.example;
 
+import com.github.zerowise.netty.ServiceListener;
 import com.github.zerowise.server.RpcDispatcher;
 import com.github.zerowise.server.RpcServer;
 
@@ -12,7 +13,7 @@ public class RpcComsumerMain {
         RpcDispatcher rpcDispatcher = RpcDispatcher.type();
         rpcDispatcher.register(new RpcCalServiceImpl());
         RpcServer rpcServer = new RpcServer(6666, rpcDispatcher);
-        rpcServer.start();
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> rpcServer.stop()));
+        rpcServer.start(ServiceListener.NONE);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> rpcServer.stop(ServiceListener.NONE)));
     }
 }

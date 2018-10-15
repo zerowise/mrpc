@@ -3,6 +3,7 @@ package com.github.zerowise;
 import com.github.zerowise.codec.RpcMessageDecoder;
 import com.github.zerowise.codec.RpcMessageEncoder;
 import com.github.zerowise.netty.Service;
+import com.github.zerowise.netty.ServiceListener;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -27,7 +28,7 @@ public class ClientMain implements Service {
 
 
     @Override
-    public void start() {
+    public void start(ServiceListener listener) {
 
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(worker).channel(NioSocketChannel.class).handler(new ChannelInitializer<Channel>() {
@@ -65,11 +66,11 @@ public class ClientMain implements Service {
     }
 
     @Override
-    public void stop() {
+    public void stop(ServiceListener listener) {
         worker.shutdownGracefully();
     }
 
     public static void main(String[] args) {
-        new ClientMain().start();
+        new ClientMain().start(ServiceListener.NONE);
     }
 }

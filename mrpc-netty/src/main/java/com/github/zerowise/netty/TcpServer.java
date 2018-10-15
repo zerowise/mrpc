@@ -25,7 +25,7 @@ public abstract class TcpServer implements Service {
     }
 
     @Override
-    public void start() {
+    public void start(ServiceListener listener) {
         ServerBootstrap b = new ServerBootstrap();
         b.group(boss, worker).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -57,7 +57,7 @@ public abstract class TcpServer implements Service {
     protected abstract ChannelHandler channelHandler();
 
     @Override
-    public void stop() {
+    public void stop(ServiceListener listener) {
         if (boss != null) boss.shutdownGracefully().syncUninterruptibly();//要先关闭接收连接的main reactor
         if (worker != null) worker.shutdownGracefully().syncUninterruptibly();//再关闭处理业务的sub reactor
     }

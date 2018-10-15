@@ -1,6 +1,7 @@
 package com.github.zerowise.server;
 
 import com.github.zerowise.message.RpcReqMessage;
+import com.github.zerowise.netty.ServiceListener;
 import com.github.zerowise.netty.TcpServer;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,8 +31,8 @@ public class RpcServer extends TcpServer {
     }
 
     @Override
-    public void stop() {
-        super.stop();
+    public void stop(ServiceListener listener) {
+        super.stop(listener);
         rpcDispatcher.shutdown();
     }
 }

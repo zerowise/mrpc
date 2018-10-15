@@ -3,6 +3,7 @@ package com.github.zerowise;
 import com.github.zerowise.codec.RpcMessageDecoder;
 import com.github.zerowise.codec.RpcMessageEncoder;
 import com.github.zerowise.netty.Service;
+import com.github.zerowise.netty.ServiceListener;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -28,7 +29,7 @@ public class ServerMain implements Service {
 
 
     @Override
-    public void start() {
+    public void start(ServiceListener listener) {
         ServerBootstrap b = new ServerBootstrap();
         b.group(boss, worker).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -61,12 +62,12 @@ public class ServerMain implements Service {
     }
 
     @Override
-    public void stop() {
+    public void stop(ServiceListener listener) {
         if (boss != null) boss.shutdownGracefully().syncUninterruptibly();//要先关闭接收连接的main reactor
         if (worker != null) worker.shutdownGracefully().syncUninterruptibly();//再关闭处理业务的sub reactor
     }
 
     public static void main(String[] args) {
-        new ServerMain().start();
+        new ServerMain().start(ServiceListener.NONE);
     }
 }

@@ -31,7 +31,7 @@ public abstract class TcpClient implements Service {
 
 
     @Override
-    public void start() {
+    public void start(ServiceListener listener) {
         bootstrap = new Bootstrap();
         bootstrap.group(worker).channel(NioSocketChannel.class).handler(new ChannelInitializer<Channel>() {
             @Override
@@ -40,7 +40,9 @@ public abstract class TcpClient implements Service {
             }
         }).option(ChannelOption.SO_REUSEADDR, true)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);//
-        channel = bootstrap.connect(remoteAddr()).channel();
+        channel = bootstrap.connect(remoteAddr()).addListener(future -> {
+
+        }).channel();
     }
 
     /**
@@ -65,7 +67,7 @@ public abstract class TcpClient implements Service {
     protected abstract ChannelHandler handler();
 
     @Override
-    public void stop() {
+    public void stop(ServiceListener listener) {
         worker.shutdownGracefully();
     }
 }
