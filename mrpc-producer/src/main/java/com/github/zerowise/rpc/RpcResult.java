@@ -21,7 +21,7 @@ public class RpcResult {
         try {
             lock.lock();
             condition.await(100, TimeUnit.SECONDS);
-            if (result == null && error != null) {
+            if (error != null) {
                 throw error;
             }
             return result;

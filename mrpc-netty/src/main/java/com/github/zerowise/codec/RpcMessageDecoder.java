@@ -5,6 +5,9 @@ import com.github.zerowise.tools.ProtostuffUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import jdk.nashorn.internal.runtime.logging.Loggable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.Charset;
 
@@ -32,7 +35,6 @@ public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
 
         Class clazz = ClazzUtil.findClazz(clazzName);
         if (clazz == null) {
-            System.err.println("------" + clazzName + "---not found!!!----");
             return null;
         }
         byte[] b1;
