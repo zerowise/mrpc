@@ -52,7 +52,10 @@ public class ConsumerCnf {
                     if (!serverList.add(serverAddr)) {
                         throw new RuntimeException("repeated server Addr:" + serverAddr);
                     }
-                    return new RegisterCnf(registerConfig.getString("register.address"), serverAddr, registerConfig.getInt("server.weight"));
+                    return new RegisterCnf(registerConfig.getString("register.address")
+                            , serverAddr
+                            , registerConfig.getInt("server.weight")
+                            , registerConfig.getString("register.class"));
                 })//
                 .collect(Collectors.toList());
     }

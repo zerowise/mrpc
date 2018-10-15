@@ -43,7 +43,17 @@ public abstract class TcpServer implements Service {
          */
         b.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         b.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-        b.bind(port);
+        try {
+            b.bind(port).sync().addListener(future -> {
+                if (listener != null) {
+                    listener.onSuccess();
+                }
+            });
+        } catch (InterruptedException e) {
+            if (listener != null) {
+                listener.onFailure(e);
+            }
+        }
     }
 
     protected void createBossGroup() {
@@ -60,6 +70,7 @@ public abstract class TcpServer implements Service {
     public void stop(ServiceListener listener) {
         if (boss != null) boss.shutdownGracefully().syncUninterruptibly();//要先关闭接收连接的main reactor
         if (worker != null) worker.shutdownGracefully().syncUninterruptibly();//再关闭处理业务的sub reactor
+        if (listener != null) listener.onSuccess();
     }
 
 }

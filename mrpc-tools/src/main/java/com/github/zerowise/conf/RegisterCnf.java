@@ -1,6 +1,6 @@
 package com.github.zerowise.conf;
 
-import com.typesafe.config.Config;
+import com.github.zerowise.tools.ClazzUtil;
 
 /**
  ** @createtime : 2018/10/15下午4:32
@@ -11,36 +11,32 @@ public class RegisterCnf {
     private String serverAddr;
     private int weight;
 
+    private Class<?> registerClazz;
+
     public RegisterCnf() {
     }
 
-    public RegisterCnf(String registerAddr, String serverAddr, int weight) {
+    public RegisterCnf(String registerAddr, String serverAddr, int weight, String registerClazzName) {
         this.registerAddr = registerAddr;
         this.serverAddr = serverAddr;
         this.weight = weight;
+        this.registerClazz = ClazzUtil.findClazz(registerClazzName);
     }
 
     public String getRegisterAddr() {
         return registerAddr;
     }
 
-    public void setRegisterAddr(String registerAddr) {
-        this.registerAddr = registerAddr;
-    }
-
     public String getServerAddr() {
         return serverAddr;
-    }
-
-    public void setServerAddr(String serverAddr) {
-        this.serverAddr = serverAddr;
     }
 
     public int getWeight() {
         return weight;
     }
 
-    public void setWeight(int weight) {
-        this.weight = weight;
+
+    public Class<?> getRegisterClazz() {
+        return registerClazz;
     }
 }

@@ -30,8 +30,7 @@ public class RpcProxy {
 
             //默认方法
             if(method.isDefault()){
-                Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class
-                        .getDeclaredConstructor(Class.class, int.class);
+                Constructor<MethodHandles.Lookup> constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
                 constructor.setAccessible(true);
 
                 Class<?> declaringClass = method.getDeclaringClass();
