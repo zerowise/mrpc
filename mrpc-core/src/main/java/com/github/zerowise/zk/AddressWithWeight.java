@@ -17,6 +17,13 @@ public class AddressWithWeight {
         this.weight = weight;
     }
 
+    public AddressWithWeight(byte[] data) {
+        String str = new String(data, Charset.defaultCharset());
+        String[] tempArr = str.split("@");
+        serverAddr = tempArr[0];
+        weight = Integer.parseInt(tempArr[1]);
+    }
+
     public String getServerAddr() {
         return serverAddr;
     }

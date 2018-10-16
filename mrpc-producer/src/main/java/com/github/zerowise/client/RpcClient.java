@@ -1,87 +1,185 @@
 package com.github.zerowise.client;
 
-import com.github.zerowise.codec.RpcMessageDecoder;
-import com.github.zerowise.codec.RpcMessageEncoder;
-import com.github.zerowise.message.RpcRespMessage;
+import com.github.zerowise.conf.ProducerCnf;
+import com.github.zerowise.message.RpcReqMessage;
 import com.github.zerowise.netty.Service;
 import com.github.zerowise.netty.ServiceListener;
 import com.github.zerowise.rpc.RpcInvoker;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import com.github.zerowise.tools.ClazzUtil;
+import com.github.zerowise.zk.Discover;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  ** @createtime : 2018/10/12下午3:24
  **/
 public class RpcClient implements Service {
 
+    private static final Logger logger = LoggerFactory.getLogger(RpcClient.class);
+
+    private Discover discover;
+    private ProducerCnf producerCnf;
+
     private RpcInvoker invoker;
-    private int connectCnt;
-    private EventLoopGroup worker;
-    private SocketAddress socketAddress;
 
-    private BatchSender[] senders;
+    private ConcurrentHashMap<String, ConnectContext> activeMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, ConnectContext> zombieMap = new ConcurrentHashMap<>();
 
-    private AtomicInteger idGen = new AtomicInteger(0);
+    private volatile boolean isCloseing = false;
 
-    public RpcClient(int connectCnt, String host, int port) {
-        this.connectCnt = connectCnt;
-        this.worker = new NioEventLoopGroup();
-        this.socketAddress = new InetSocketAddress(host, port);
+    // 并发的做一些建立连接、心跳等后台工作，线程数量用配置的方式更合理一些，但需要用户深入理解这个逻辑，暂时先这样
+    private static final ForkJoinPool appForkJoinPool = new ForkJoinPool(64);
+
+    static {
+        // 自动资源清理
+        Runtime.getRuntime()//
+                .addShutdownHook(new Thread(() -> appForkJoinPool.shutdownNow(), "appForkJoinPool-shutdown-thread"));
     }
 
-    protected ChannelHandler handler() {
-        return new SimpleChannelInboundHandler<RpcRespMessage>() {
-            @Override
-            protected void channelRead0(ChannelHandlerContext ctx, RpcRespMessage msg) throws Exception {
-                invoker.onMessageReceive(msg);
-            }
-        };
+    public RpcClient(ProducerCnf producerCnf) {
+        this.producerCnf = producerCnf;
+        try {
+            discover = (Discover) ClazzUtil.findClazz(producerCnf.getDiscover().getClassName()).newInstance();
+            discover.init(producerCnf.getDiscover().getAddress());
+            discover.addListener(producerCnf.getGroup(), producerCnf.getApp(), serverWithWeight -> {
+                if (isCloseing) {
+                    return;
+                }
+
+                if (logger.isInfoEnabled()) {
+                    logger.info("Discover检测到服务变化: " + serverWithWeight);
+                }
+
+                try {
+                    updateConnectors(serverWithWeight);
+                } catch (Exception e) {
+                    if (logger.isErrorEnabled()) {
+                        logger.error("Discover连接出错: " + serverWithWeight, e);
+                    }
+                }
+            });
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
+
+    private void updateConnectors(Map<String, Integer> serverWithWeight) {
+        if (serverWithWeight == null || serverWithWeight.size() == 0) {
+            return;
+        }
+
+        if (isCloseing) {
+            return;
+        }
+
+        try {
+
+            // 未建立连接的建立连接
+            appForkJoinPool.submit(() -> {
+                serverWithWeight//
+                        .entrySet()//
+                        .stream()//
+                        .parallel()// 并发的建立连接
+                        .filter(kv -> !activeMap.containsKey(kv.getKey()))// 过滤掉已连接上的
+                        .forEach(kv -> {
+                            if (isCloseing) {
+                                return;
+                            }
+                            updateConnector(kv.getKey(), kv.getValue());
+                        });
+            }).get();
+
+            // 删除多余的连接
+            appForkJoinPool.submit(() -> {
+                activeMap//
+                        .entrySet()//
+                        .stream()//
+                        .parallel()//
+                        .forEach(kv -> {
+                            if (isCloseing) {
+                                return;
+                            }
+
+                            String serverAddress = kv.getKey();
+
+                            if (!serverWithWeight.containsKey(serverAddress)) {
+                                ConnectContext context = activeMap.remove(serverAddress);
+                                context.stop(ServiceListener.NONE);
+                            }
+                        });
+            }).get();
+
+            // 删除多余的连接
+            appForkJoinPool.submit(() -> {
+                zombieMap//
+                        .entrySet()//
+                        .stream()//
+                        .parallel()//
+                        .forEach(kv -> {
+                            if (isCloseing) {
+                                return;
+                            }
+                            String serverAddress = kv.getKey();
+                            if (!serverWithWeight.containsKey(serverAddress)) {
+                                ConnectContext context = zombieMap.remove(serverAddress);
+                                context.stop(ServiceListener.NONE);
+                            }
+                        });
+            }).get();
+        } catch (Exception e) {
+            logger.error("", e);
+        }
+
+
+    }
+
+    private void updateConnector(String key, int weight) {
+
+        String[] addr = key.split(":");
+        ConnectContext connectContext = new ConnectContext(producerCnf.getConnectCnt(), new InetSocketAddress(addr[0], Integer.parseInt(addr[1])));
+        connectContext.start(ServiceListener.NONE);
+        connectContext.setInvoker(invoker);
+        activeMap.put(key, connectContext);
+        zombieMap.remove(key);
+    }
+
 
     @Override
     public void start(ServiceListener listener) {
 
-        Bootstrap bootstrap = new Bootstrap();
-        bootstrap.group(worker).channel(NioSocketChannel.class).handler(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) throws Exception {
-                ch.pipeline().addLast(new RpcMessageDecoder(), new RpcMessageEncoder(), handler());
-            }
-        }).option(ChannelOption.SO_REUSEADDR, true)
-                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);//
-
-        senders = new BatchSender[connectCnt];
-        for (int i = 0; i < connectCnt; i++) {
-            senders[i] = new BatchSender(bootstrap.connect(socketAddress).addListener(future -> listener.onSuccess()).channel());
-        }
     }
 
     @Override
     public void stop(ServiceListener listener) {
-        worker.shutdownGracefully();
-        Stream.of(senders).forEach(send -> {
-            try {
-                send.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
+        if (isCloseing) {
+            return;
+        }
+        isCloseing = false;
+        activeMap.values().forEach(connectContext -> connectContext.stop(listener));
+        activeMap.clear();
+        zombieMap.clear();
+        try {
+            discover.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void writeMessage(Object rpcReqMessage) {
-        senders[idGen.incrementAndGet() % connectCnt].send(rpcReqMessage);
-    }
 
     public void setInvoker(RpcInvoker invoker) {
         this.invoker = invoker;
+        activeMap.values().forEach(connectContext -> connectContext.setInvoker(invoker));
+    }
+
+    public void writeMessage(Object rpcReqMessage) {
+
     }
 }
