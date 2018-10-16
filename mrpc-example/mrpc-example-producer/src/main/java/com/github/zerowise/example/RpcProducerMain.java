@@ -1,13 +1,22 @@
 package com.github.zerowise.example;
 
 import com.github.zerowise.client.RpcClient;
-import com.github.zerowise.netty.ServiceListener;
-import com.github.zerowise.rpc.RpcInvoker;
-import com.github.zerowise.rpc.RpcProxy;
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
+import java.util.List;
 
 public class RpcProducerMain {
     public static void main(String[] args) {
-//        RpcClient rpcClient = RpcClient.createFixedAddrClient("localhost", 6666);
+
+        Config config = ConfigFactory.load("mrpc-producer-sample.conf");
+
+        List<? extends Config> configs =config.getConfigList("apps");
+
+        //consumerCnf.parse();
+
+        //RpcClient rpcClient = new RpcClient();
 //
 //        rpcClient.start(ServiceListener.NONE);
 //
