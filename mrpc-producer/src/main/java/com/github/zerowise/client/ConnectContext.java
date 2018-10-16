@@ -2,6 +2,7 @@ package com.github.zerowise.client;
 
 import com.github.zerowise.codec.RpcMessageDecoder;
 import com.github.zerowise.codec.RpcMessageEncoder;
+import com.github.zerowise.loadbalance.Weightable;
 import com.github.zerowise.message.RpcRespMessage;
 import com.github.zerowise.netty.Service;
 import com.github.zerowise.netty.ServiceListener;
@@ -9,6 +10,7 @@ import com.github.zerowise.rpc.RpcInvoker;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.io.IOException;
@@ -19,7 +21,7 @@ import java.util.stream.Stream;
 /**
  ** @createtime : 2018/10/16上午10:23
  **/
-public class ConnectContext implements Service {
+public class ConnectContext implements Weightable {
 
     private Sender[] senders;
 
@@ -30,15 +32,17 @@ public class ConnectContext implements Service {
 
     private final SocketAddress socketAddress;
 
+    private int weight;
+
     private AtomicInteger idGen = new AtomicInteger(0);
 
     public ConnectContext(int connectCnt, SocketAddress socketAddress) {
         this.connectCnt = connectCnt;
         this.socketAddress = socketAddress;
+        worker = new NioEventLoopGroup(1);
     }
 
-    @Override
-    public void start(ServiceListener listener) {
+    public void start() {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(worker).channel(NioSocketChannel.class).handler(new ChannelInitializer<Channel>() {
             @Override
@@ -50,12 +54,11 @@ public class ConnectContext implements Service {
 
         senders = new BatchSender[connectCnt];
         for (int i = 0; i < connectCnt; i++) {
-            senders[i] = new BatchSender(bootstrap.connect(socketAddress).addListener(future -> listener.onSuccess()).channel());
+            senders[i] = new BatchSender(bootstrap.connect(socketAddress).channel());
         }
     }
 
-    @Override
-    public void stop(ServiceListener listener) {
+    public void stop() {
         worker.shutdownGracefully();
         Stream.of(senders).forEach(send -> {
             try {
@@ -83,5 +86,14 @@ public class ConnectContext implements Service {
 
     public void setInvoker(RpcInvoker invoker) {
         this.invoker = invoker;
+    }
+
+    public void setWeight(int weight) {
+        this.weight = weight;
+    }
+
+    @Override
+    public int weight() {
+        return weight;
     }
 }

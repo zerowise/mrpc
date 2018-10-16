@@ -11,6 +11,8 @@ public class ProducerCnf {
     private String app;
     private int connectCnt;
 
+    private String loadBalaceClass;
+
     private DiscoverCnf discover;
 
     public String getGroup() {
@@ -45,6 +47,9 @@ public class ProducerCnf {
         this.discover = discover;
     }
 
+    public String getLoadBalaceClass() {
+        return loadBalaceClass;
+    }
 
     void parse(Config config){
 

@@ -1,12 +1,15 @@
 package com.github.zerowise.client;
 
 import com.github.zerowise.conf.ProducerCnf;
+import com.github.zerowise.loadbalance.LoadBalance;
+import com.github.zerowise.loadbalance.Weightable;
 import com.github.zerowise.message.RpcReqMessage;
 import com.github.zerowise.netty.Service;
 import com.github.zerowise.netty.ServiceListener;
 import com.github.zerowise.rpc.RpcInvoker;
 import com.github.zerowise.tools.ClazzUtil;
 import com.github.zerowise.zk.Discover;
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +18,7 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  ** @createtime : 2018/10/12下午3:24
@@ -36,6 +40,8 @@ public class RpcClient implements Service {
     // 并发的做一些建立连接、心跳等后台工作，线程数量用配置的方式更合理一些，但需要用户深入理解这个逻辑，暂时先这样
     private static final ForkJoinPool appForkJoinPool = new ForkJoinPool(64);
 
+    private LoadBalance<ConnectContext> loadBalance;
+
     static {
         // 自动资源清理
         Runtime.getRuntime()//
@@ -45,6 +51,7 @@ public class RpcClient implements Service {
     public RpcClient(ProducerCnf producerCnf) {
         this.producerCnf = producerCnf;
         try {
+            loadBalance = (LoadBalance<ConnectContext>) ClazzUtil.findClazz(producerCnf.getLoadBalaceClass()).newInstance();
             discover = (Discover) ClazzUtil.findClazz(producerCnf.getDiscover().getClassName()).newInstance();
             discover.init(producerCnf.getDiscover().getAddress());
             discover.addListener(producerCnf.getGroup(), producerCnf.getApp(), serverWithWeight -> {
@@ -81,7 +88,7 @@ public class RpcClient implements Service {
         }
 
         try {
-
+            AtomicBoolean changed = new AtomicBoolean(false);
             // 未建立连接的建立连接
             appForkJoinPool.submit(() -> {
                 serverWithWeight//
@@ -93,6 +100,7 @@ public class RpcClient implements Service {
                             if (isCloseing) {
                                 return;
                             }
+                            changed.set(true);
                             updateConnector(kv.getKey(), kv.getValue());
                         });
             }).get();
@@ -111,8 +119,9 @@ public class RpcClient implements Service {
                             String serverAddress = kv.getKey();
 
                             if (!serverWithWeight.containsKey(serverAddress)) {
+                                changed.set(true);
                                 ConnectContext context = activeMap.remove(serverAddress);
-                                context.stop(ServiceListener.NONE);
+                                context.stop();
                             }
                         });
             }).get();
@@ -130,10 +139,15 @@ public class RpcClient implements Service {
                             String serverAddress = kv.getKey();
                             if (!serverWithWeight.containsKey(serverAddress)) {
                                 ConnectContext context = zombieMap.remove(serverAddress);
-                                context.stop(ServiceListener.NONE);
+                                context.stop();
                             }
                         });
             }).get();
+
+            if(changed.get()){
+                loadBalance.updateWeightables(Lists.newArrayList(activeMap.values()));
+            }
+
         } catch (Exception e) {
             logger.error("", e);
         }
@@ -145,7 +159,8 @@ public class RpcClient implements Service {
 
         String[] addr = key.split(":");
         ConnectContext connectContext = new ConnectContext(producerCnf.getConnectCnt(), new InetSocketAddress(addr[0], Integer.parseInt(addr[1])));
-        connectContext.start(ServiceListener.NONE);
+        connectContext.start();
+        connectContext.setWeight(weight);
         connectContext.setInvoker(invoker);
         activeMap.put(key, connectContext);
         zombieMap.remove(key);
@@ -163,7 +178,7 @@ public class RpcClient implements Service {
             return;
         }
         isCloseing = false;
-        activeMap.values().forEach(connectContext -> connectContext.stop(listener));
+        activeMap.values().forEach(connectContext -> connectContext.stop());
         activeMap.clear();
         zombieMap.clear();
         try {
@@ -180,6 +195,6 @@ public class RpcClient implements Service {
     }
 
     public void writeMessage(Object rpcReqMessage) {
-
+        loadBalance.select().writeMessage(rpcReqMessage);
     }
 }
